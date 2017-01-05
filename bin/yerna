@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+
+// Copyright 2017 Palantir Technologies Inc.
+
+require('../lib/error-handling').attachGlobalErrorHandling();
+
+require('colors');
+const path = require('path');
+const _ = require('lodash');
+const commander = require('commander');
+const child_process = require('child_process');
+const fs = require('fs');
+
+const { getPackagesPath, getPackages, toposortPackages } = require('../lib/packages');
+const { linkAllPackagesToEachOther } = require('../lib/linking');
+const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
+const { Logger } = require('../lib/logger');
+const { runPackageBatches, abort } = require('../lib/taskrunning');
+
+function optParallel(n) {
+  if (n == null || +n <= 0 || Math.round(n) !== +n) {
+    console.error('yerna: parallel option must be a positive integer'.red);
+    process.exit(1);
+  }
+  return +n;
+}
+
+function concatOpt(opt, allOpts) {
+  return allOpts.concat([ opt ]);
+}
+
+commander
+  .description('Yerna: run tasks over one or more packages in parallel')
+  .usage('<command> [yerna options] [-- delegate options]')
+  .option('-i, --include <regex>', 'run command only on packages matching <regex>; can be specified multiple times (default: all packages)', concatOpt, [])
+  .option('-x, --exclude <regex>', 'run command except on packages matching <regex>; can be specified multiple times (default: no excludes)', concatOpt, [])
+  .option('--dependents', 'additionally include all transitive dependents of selected packages (even when excluded)', false)
+  .option('--dependencies', 'additionally include all transitive dependencies of selected packages (even when excluded)', false)
+  .option('-p, --parallel <n>', 'run up to <n> processes in parallel (default: 4)', optParallel, 4)
+  .option('-t, --no-toposort', 'run packages with maximum parallelization, ignoring dependency ordering', false)
+  .option('-q, --quiet', 'suppress non-error output from Yarn tasks', false)
+  .option('-c, --no-color', 'disable colorized output', false);
+
+commander
+  .command('install -- [args...]')
+  .description('`yarn install` for the specified packages')
+  .action(performInstall);
+
+commander
+  .command('link')
+  .description('symlink all local package dependencies (ignores all flags)')
+  .action(performLink);
+
+commander
+  .command('list')
+  .description('list package names matching all provided flags')
+  .action(performList);
+
+commander
+  .command('run <scriptname> -- [args...]')
+  .description('`yarn run <scriptname>` for the specified packages')
+  .action(performRun);
+
+commander
+  .command('exec <executable> -- [args...]')
+  .description('run `<executable> <args>` for the specified packages')
+  .action(performExec);
+
+commander.on('--help', () =>{
+  [
+    '  Notes:',
+    '',
+    '    - Use -- to separate arguments intended for Yarn. See examples.',
+    '    - Most tasks automatically relink local dependencies; `yerna link` usage should be rare.',
+    '',
+    '  Examples:',
+    '',
+    '    $ yerna install',
+    '    $ yerna install --include foo',
+    '    $ yerna install -- --pure-lockfile',
+    '    $ yerna install --include foo --include bar -- --pure-lockfile',
+    '    $ yerna run taskname --include foo --exclude bar',
+    '    $ yerna exec ls -- -la',
+    ''
+  // Yes, stdout specifically.
+  ].forEach(line => console.log(line));
+});
+
+let didInit = false;
+function sideEffectingInit() {
+  if (didInit) {
+    return;
+  }
+  didInit = true;
+
+  if (!commander.color) {
+    require('colors').enabled = false;
+  }
+
+  // 10 for default, then one for each of the 'exit' handlers we know will be attached by child processes.
+  // All this does is prevent warnings, but it's good practice.
+  process.setMaxListeners(10 + commander.parallel);
+
+  process.on('SIGINT', () => {
+    console.error('Received sigint, terminating...'.red);
+    abort();
+  });
+}
+
+function findTransitiveDependentsOrDependencies(allPackages, rootPackageName, typeKey) {
+  const selectedPackageNames = [];
+  let packageQueue = [ allPackages[rootPackageName] ];
+  while (packageQueue.length) {
+    const currentPackage = packageQueue.shift();
+    if (selectedPackageNames.indexOf(currentPackage.name) === -1) {
+      selectedPackageNames.push(currentPackage.name);
+      packageQueue = packageQueue.concat(currentPackage[typeKey].map(packageName => allPackages[packageName]))
+    }
+  }
+  return selectedPackageNames.map(packageName => allPackages[packageName]);
+}
+
+function maybeIncludeDependentsAndDependencies(allPackages, package) {
+  let packages = [ package ];
+
+  if (commander.dependents) {
+    packages = packages.concat(_.flatMap(packages, pkg => findTransitiveDependentsOrDependencies(allPackages, pkg.name, 'localDependents')));
+  }
+
+  if (commander.dependencies) {
+    packages = packages.concat(_.flatMap(packages, pkg => findTransitiveDependentsOrDependencies(allPackages, pkg.name, 'localDependencies')));
+  }
+
+  return _.uniqBy(packages, 'name');
+}
+
+function applyIncludeExclude(package) {
+  return (
+    (commander.include.length === 0 || commander.include.some(regex => new RegExp(regex).test(package.name))) &&
+    (commander.exclude.length === 0 || !commander.exclude.some(regex => new RegExp(regex).test(package.name)))
+  );
+};
+
+function getBatchedPackages(additionalFilter = () => true) {
+  const packagesPath = getPackagesPath();
+
+  if (!fs.existsSync(packagesPath)) {
+    console.error(`yerna: path ${packagesPath} does not exist`.red);
+    process.exit(1);
+  }
+
+  const packagesByName = getPackages(packagesPath);
+  const selectedPackages = _.chain(packagesByName)
+    .values()
+    .filter(applyIncludeExclude)
+    .flatMap(pkg => maybeIncludeDependentsAndDependencies(packagesByName, pkg))
+    .uniqBy('name')
+    .sortBy('name')
+    .filter(additionalFilter)
+    .value();
+
+  const batches = commander.toposort
+    ? toposortPackages(_.keyBy(selectedPackages, package => package.name))
+    : [ selectedPackages ];
+  return { packagesByName, selectedPackages, batches };
+}
+
+function performLink() {
+  const startTime = Date.now();
+  sideEffectingInit();
+  const packageCount = linkAllPackagesToEachOther('.');
+  console.error(`yerna: linked ${packageCount.toString().cyan} local packages`);
+  Logger.logSuccessTiming(startTime);
+}
+
+function performInstall(moreArgs) {
+  sideEffectingInit();
+  const yarnArgs = [ 'install' ].concat(moreArgs);
+  const { packagesByName, selectedPackages, batches } = getBatchedPackages();
+  const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '));
+  runPackageBatches(logger, commander, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+}
+
+function performList() {
+  const startTime = Date.now();
+  sideEffectingInit();
+  const { selectedPackages, batches } = getBatchedPackages();
+  const logger = new Logger(commander, selectedPackages);
+  logger.logPrelude();
+  // Use batches so that the toposort flag is respected.
+  // Yes, stdout specifically.
+  batches.forEach(batch => batch.forEach(pkg => console.log(pkg.name)));
+  Logger.logSuccessTiming(startTime);
+}
+
+function performRun(scriptName, moreArgs) {
+  sideEffectingInit();
+  const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
+  const { packagesByName, selectedPackages, batches } = getBatchedPackages(package => !!package.scripts[scriptName]);
+  const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName);
+  runPackageBatches(logger, commander, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+}
+
+function performExec(binaryName, moreArgs) {
+  sideEffectingInit();
+  const { selectedPackages, batches } = getBatchedPackages();
+  const logger = new Logger(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' '));
+  runPackageBatches(logger, commander, batches, spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs));
+}
+
+commander.parse(process.argv);
+
+if (!didInit) {
+  commander.outputHelp();
+  process.exit(2);
+}

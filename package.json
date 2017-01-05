@@ -1,0 +1,20 @@
+{
+  "name": "yerna",
+  "version": "0.1.0",
+  "description": "Yarn + Lerna = Yerna",
+  "scripts": {
+    "test": "exit 0"
+  },
+  "bin": {
+    "yarnhack": "./bin/yarnhack",
+    "yerna": "./bin/yerna"
+  },
+  "dependencies": {
+    "bluebird": "^3.4.6",
+    "colors": "^1.1.2",
+    "commander": "^2.9.0",
+    "glob": "^7.1.1",
+    "lodash": "^4.17.2",
+    "mkdirp": "^0.5.1"
+  }
+}
