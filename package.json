@@ -1,5 +1,5 @@
 {
-  "name": "yerna",
+  "name": "yernapkg",
   "version": "0.1.0",
   "description": "Yarn + Lerna = Yerna",
   "scripts": {
@@ -16,5 +16,10 @@
     "glob": "^7.1.1",
     "lodash": "^4.17.2",
     "mkdirp": "^0.5.1"
-  }
+  },
+  "keywords": [
+    "lerna",
+    "yarn",
+    "yerna"
+  ]
 }
