@@ -1,0 +1,12 @@
+machine:
+  node:
+    version: 6.9.1
+
+deployment:
+  npm-publish:
+    tag: /v[0-9]+(\.[0-9]+){2}(-.*[0-9]+)?/
+    owner: palantir
+    commands:
+      - touch .npmrc
+      - printf "\n$NPM_REGISTRY_CREDS\n" >> .npmrc
+      - npm publish
