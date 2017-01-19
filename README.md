@@ -10,6 +10,8 @@ The idea for Yerna stemmed from [a Lerna ticket suggesting Yarn integration](htt
 
 While I use Yerna heavily myself, it is still fundamentally a hack-based stopgap/overgrown experiment. I am happy to discuss the feature set and its pros/cons in contrast to those of Lerna and Yarn, but note that **I will not be prioritizing feature requests or performing nontrivial maintenance** if it does not affect my own workflow.
 
+Furthermore, the code is pretty sloppy in places, and I apologize in advance to any sensibilities that may be offended. This is basically a glorified proof of concept, submitted to you for discussion and experimentation.
+
 ## Installation
 
 **Note:** `yarn` is expected to already be installed and to exist on your `PATH` as Yerna will shell out to Yarn.
