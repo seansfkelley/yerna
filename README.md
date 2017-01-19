@@ -8,14 +8,8 @@ Yerna is a monorepo management tool in the style of [Lerna](https://lernajs.io/)
 
 **Note:** `yarn` is expected to already be installed and to exist on your `PATH` as Yerna will shell out to Yarn.
 
-Yerna is not yet published anywhere, so you have to run it from your clone:
-
 ```sh
-git clone <this repo>
-cd yerna
-yarn install
-cd path/to/your/repo
-../path/to/bin/yerna install
+yarn global add yernapkg
 ```
 
 ## Replacing Lerna
