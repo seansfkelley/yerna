@@ -162,7 +162,8 @@ function getBatchedPackages(additionalFilter = () => true) {
   const batches = commander.toposort
     ? toposortPackages(_.keyBy(selectedPackages, package => package.name))
     : [ selectedPackages ];
-  return { packagesByName, selectedPackages, batches };
+
+  return { packagesPath, packagesByName, selectedPackages, batches };
 }
 
 function performLink() {
@@ -176,9 +177,9 @@ function performLink() {
 function performInstall(moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'install' ].concat(moreArgs);
-  const { packagesByName, selectedPackages, batches } = getBatchedPackages();
+  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages();
   const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '));
-  runPackageBatches(logger, commander, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
 }
 
 function performList() {
@@ -196,16 +197,16 @@ function performList() {
 function performRun(scriptName, moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
-  const { packagesByName, selectedPackages, batches } = getBatchedPackages(package => !!package.scripts[scriptName]);
+  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages(package => !!package.scripts[scriptName]);
   const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName);
-  runPackageBatches(logger, commander, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
 }
 
 function performExec(binaryName, moreArgs) {
   sideEffectingInit();
-  const { selectedPackages, batches } = getBatchedPackages();
+  const { packagesPath, selectedPackages, batches } = getBatchedPackages();
   const logger = new Logger(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' '));
-  runPackageBatches(logger, commander, batches, spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs));
+  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs));
 }
 
 commander.parse(process.argv);
