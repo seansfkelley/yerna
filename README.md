@@ -14,20 +14,13 @@ Furthermore, the code is pretty sloppy in places, and I apologize in advance to 
 
 ## Installation
 
-**Note:** `yarn` is expected to already be installed and to exist on your `PATH` as Yerna will shell out to Yarn.
+**Note:** `yarn` is expected to already be installed and to exist on your `PATH` as Yerna will shell out to it.
 
 ```sh
 yarn global add yernapkg
 ```
 
-## Replacing Lerna
-
-```sh
-npm uninstall -g lerna
-cd path/to/your/repo
-rm lerna.json
-yerna install
-```
+Also ensure that Yarn's globally-installed binaries are accessible on your `PATH`.
 
 ## Usage
 
@@ -37,11 +30,31 @@ Yerna provides two binaries: `yerna` itself and a helper `yarnhack`. Both tools 
 
 ### `yerna`
 
-`yerna` is a tool for running tasks over one or more local packages, using Yarn, in parallel. Run `yerna --help` for information on the supported commands and flags.
+`yerna` is a tool for running tasks over one or more local packages, using Yarn, in parallel. `yerna` provides a few different commands, listed briefly below. Note that all commands respect the package-selection flags (`--include`, etc.) unless otherwise noted.
+
+Run `yerna --help` for more information on the supported commands and flags.
+
+
+command          | description                                            | notes
+---------------- | ------------------------------------------------------ | -----
+install          | install all external packages, link all local packages |
+link             | link all local packages without installing             | ignores flags
+list             | list selected packages                                 | useful for testing flag combinations
+run \<script\>   | run the npm script \<script\> in packages              |
+exec \<command\> | run shell command \<command\> in packages              |
 
 ### `yarnhack`
 
 `yarnhack` is an executable that wraps Yarn and mangles `package.json` to prevent Yarn from trying to install packages that don't exist on the registry. Otherwise, it forwards directly to the system-installed `yarn` and understands all commands and flags defined there.
+
+### Replacing Lerna
+
+```sh
+npm uninstall -g lerna
+cd path/to/your/repo
+rm lerna.json
+yerna install
+```
 
 ### Caveats
 
