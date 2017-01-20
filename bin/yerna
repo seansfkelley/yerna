@@ -169,7 +169,7 @@ function getBatchedPackages(additionalFilter = () => true) {
 function performLink() {
   const startTime = Date.now();
   sideEffectingInit();
-  const packageCount = linkAllPackagesToEachOther('.');
+  const packageCount = linkAllPackagesToEachOther(getPackagesPath());
   console.error(`yerna: linked ${packageCount.toString().cyan} local packages`);
   Logger.logSuccessTiming(startTime);
 }
