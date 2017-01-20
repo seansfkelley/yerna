@@ -4,12 +4,19 @@
 
 require('colors');
 
+const fs = require('fs');
+
 const { linkAllPackagesToEachOther } = require('../lib/linking');
 const { getPackagesPath, getPackages } = require('../lib/packages');
+const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
+
+if (!fs.existsSync('package.json')) {
+  console.error('yarnhack: no package.json in the current directory, aborting...'.red);
+  process.exit(1);
+}
 
 const packagesByName = getPackages(getPackagesPath());
 
-const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 const child = runYarnWithPackageJsonMangling(process.argv.slice(2), {
   cwd: process.cwd(),
   env: process.env,
@@ -20,4 +27,9 @@ child.on('exit', (code, signal) => {
   const packageCount = linkAllPackagesToEachOther(getPackagesPath());
   console.log(`yarnhack: re-linked ${packageCount.toString().cyan} local packages`);
   process.exit(code);
+});
+
+process.on('SIGINT', () => {
+  console.error('yarnhack: received sigint, terminating...'.red);
+  child.kill();
 });

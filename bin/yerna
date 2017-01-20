@@ -102,7 +102,7 @@ function sideEffectingInit() {
   process.setMaxListeners(10 + commander.parallel);
 
   process.on('SIGINT', () => {
-    console.error('Received sigint, terminating...'.red);
+    console.error('yerna: received sigint, terminating...'.red);
     abort();
   });
 }
