@@ -64,7 +64,10 @@ See [How It Works](#how-it-works) for details on how Yerna makes Yarn work, but 
 
 #### Symlinks
 
-Both `yerna` and `yarnhack` will generally automatically symlink packages to one another after completing their task. This should make explicit use of `yerna link` very rare, but the option is always there if you e.g. run `yarn` directly and remove symlinks.
+Both `yerna` and `yarnhack` assume that all local packages should _always_ be symlinked. This means that they will:
+
+- remove anything that's in the way of placing a symlink, even if it's a directory or regular file
+- automatically generate symlinks before/after most operations as a convenience (so you almost never have to run `yerna link`)
 
 ### npm Lifecycle Scripts
 
