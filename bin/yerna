@@ -32,6 +32,7 @@ function concatOpt(opt, allOpts) {
 commander
   .description('Yerna: run tasks over one or more packages in parallel')
   .usage('<command> [yerna options] [-- delegate options]')
+  .version(require("../package.json").version)
   .option('-i, --include <regex>', 'run command only on packages matching <regex>; can be specified multiple times (default: all packages)', concatOpt, [])
   .option('-x, --exclude <regex>', 'run command except on packages matching <regex>; can be specified multiple times (default: no excludes)', concatOpt, [])
   .option('--dependents', 'additionally include all transitive dependents of selected packages (even when excluded)', false)
