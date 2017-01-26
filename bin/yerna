@@ -10,12 +10,13 @@ const _ = require('lodash');
 const commander = require('commander');
 const child_process = require('child_process');
 const fs = require('fs');
+const Promise = require('bluebird');
 
-const { getPackagesPath, getPackages, toposortPackages } = require('../lib/packages');
+const { getPackagesPath, getPackages } = require('../lib/packages');
 const { linkAllPackagesToEachOther } = require('../lib/linking');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 const { Logger } = require('../lib/logger');
-const { runPackageBatches, abort } = require('../lib/taskrunning');
+const { createTaskRunner, runPackagesToposorted, abort } = require('../lib/taskrunning');
 
 function optParallel(n) {
   if (n == null || +n <= 0 || Math.round(n) !== +n) {
@@ -38,7 +39,6 @@ commander
   .option('--dependents', 'additionally include all transitive dependents of selected packages (even when excluded)', false)
   .option('--dependencies', 'additionally include all transitive dependencies of selected packages (even when excluded)', false)
   .option('-p, --parallel <n>', 'run up to <n> processes in parallel (default: 4)', optParallel, 4)
-  .option('-t, --no-toposort', 'run packages with maximum parallelization, ignoring dependency ordering', false)
   .option('-q, --quiet', 'suppress non-error output from Yarn tasks', false)
   .option('-c, --no-color', 'disable colorized output', false);
 
@@ -142,7 +142,7 @@ function applyIncludeExclude(package) {
   );
 };
 
-function getBatchedPackages(additionalFilter = () => true) {
+function getSelectedPackages(additionalFilter = () => true) {
   const packagesPath = getPackagesPath();
 
   if (!fs.existsSync(packagesPath)) {
@@ -160,11 +160,7 @@ function getBatchedPackages(additionalFilter = () => true) {
     .filter(additionalFilter)
     .value();
 
-  const batches = commander.toposort
-    ? toposortPackages(_.keyBy(selectedPackages, package => package.name))
-    : [ selectedPackages ];
-
-  return { packagesPath, packagesByName, selectedPackages, batches };
+  return { packagesPath, packagesByName, selectedPackages };
 }
 
 function performLink() {
@@ -178,36 +174,56 @@ function performLink() {
 function performInstall(moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'install' ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages();
-  const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '));
-  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages();
+  runPackagesToposorted(
+    new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' ')),
+    commander,
+    packagesPath,
+    selectedPackages,
+    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName))
+  );
 }
 
 function performList() {
   const startTime = Date.now();
   sideEffectingInit();
-  const { selectedPackages, batches } = getBatchedPackages();
-  const logger = new Logger(commander, selectedPackages);
-  logger.logPrelude();
-  // Use batches so that the toposort flag is respected.
-  // Yes, stdout specifically.
-  batches.forEach(batch => batch.forEach(pkg => console.log(pkg.name)));
-  Logger.logSuccessTiming(startTime);
+  const { packagesPath, selectedPackages } = getSelectedPackages();
+  runPackagesToposorted(
+    new Logger(commander, selectedPackages),
+    commander,
+    packagesPath,
+    selectedPackages,
+    (pkg) => {
+      // Yes, stdout specifically.
+      console.log(pkg.name);
+      return Promise.resolve();
+    }
+  );
 }
 
 function performRun(scriptName, moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages(package => !!package.scripts[scriptName]);
-  const logger = new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName);
-  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName));
+  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages(package => !!package.scripts[scriptName]);
+  runPackagesToposorted(
+    new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName),
+    commander,
+    packagesPath,
+    selectedPackages,
+    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName))
+  );
 }
 
 function performExec(binaryName, moreArgs) {
   sideEffectingInit();
-  const { packagesPath, selectedPackages, batches } = getBatchedPackages();
-  const logger = new Logger(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' '));
-  runPackageBatches(logger, commander, packagesPath, batches, spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs));
+  const { packagesPath, selectedPackages } = getSelectedPackages();
+  runPackagesToposorted(
+    new Logger(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' ')),
+    commander,
+    packagesPath,
+    selectedPackages,
+    createTaskRunner(spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs))
+  );
 }
 
 commander.parse(process.argv);

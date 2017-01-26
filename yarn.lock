@@ -2,6 +2,12 @@
 # yarn lockfile v1
 
 
+async@^2.1.4:
+  version "2.1.4"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/async/-/async-2.1.4.tgz#2d2160c7788032e4dd6cbe2502f1f9a2c8f6cde4"
+  dependencies:
+    lodash "^4.14.0"
+
 balanced-match@^0.4.1:
   version "0.4.2"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/balanced-match/-/balanced-match-0.4.2.tgz#cb3f3e3c732dc0f01ee70b403f302e61d7709838"
@@ -61,7 +67,7 @@ inherits@2:
   version "2.0.3"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
 
-lodash@^4.17.2:
+lodash@^4.14.0, lodash@^4.17.2:
   version "4.17.2"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/lodash/-/lodash-4.17.2.tgz#34a3055babe04ce42467b607d700072c7ff6bf42"
 
