@@ -12,7 +12,7 @@ const child_process = require('child_process');
 const fs = require('fs');
 const Promise = require('bluebird');
 
-const { getPackagesPath, getPackages, toposortPackages } = require('../lib/packages');
+const { getPackagesPath, getPackages } = require('../lib/packages');
 const { linkAllPackagesToEachOther } = require('../lib/linking');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 const { Logger } = require('../lib/logger');
@@ -38,7 +38,6 @@ commander
   .option('--dependents', 'additionally include all transitive dependents of selected packages (even when excluded)', false)
   .option('--dependencies', 'additionally include all transitive dependencies of selected packages (even when excluded)', false)
   .option('-p, --parallel <n>', 'run up to <n> processes in parallel (default: 4)', optParallel, 4)
-  .option('-t, --no-toposort', 'run packages with maximum parallelization, ignoring dependency ordering', false)
   .option('-q, --quiet', 'suppress non-error output from Yarn tasks', false)
   .option('-c, --no-color', 'disable colorized output', false);
 
@@ -142,7 +141,7 @@ function applyIncludeExclude(package) {
   );
 };
 
-function getBatchedPackages(additionalFilter = () => true) {
+function getSelectedPackages(additionalFilter = () => true) {
   const packagesPath = getPackagesPath();
 
   if (!fs.existsSync(packagesPath)) {
@@ -160,11 +159,7 @@ function getBatchedPackages(additionalFilter = () => true) {
     .filter(additionalFilter)
     .value();
 
-  const batches = commander.toposort
-    ? toposortPackages(_.keyBy(selectedPackages, package => package.name))
-    : [ selectedPackages ];
-
-  return { packagesPath, packagesByName, selectedPackages, batches };
+  return { packagesPath, packagesByName, selectedPackages };
 }
 
 function performLink() {
@@ -178,7 +173,7 @@ function performLink() {
 function performInstall(moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'install' ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages();
+  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages();
   runPackagesToposorted(
     new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' ')),
     commander,
@@ -191,7 +186,7 @@ function performInstall(moreArgs) {
 function performList() {
   const startTime = Date.now();
   sideEffectingInit();
-  const { packagesPath, selectedPackages, batches } = getBatchedPackages();
+  const { packagesPath, selectedPackages } = getSelectedPackages();
   runPackagesToposorted(
     new Logger(commander, selectedPackages),
     commander,
@@ -208,7 +203,7 @@ function performList() {
 function performRun(scriptName, moreArgs) {
   sideEffectingInit();
   const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages, batches } = getBatchedPackages(package => !!package.scripts[scriptName]);
+  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages(package => !!package.scripts[scriptName]);
   runPackagesToposorted(
     new Logger(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName),
     commander,
@@ -220,7 +215,7 @@ function performRun(scriptName, moreArgs) {
 
 function performExec(binaryName, moreArgs) {
   sideEffectingInit();
-  const { packagesPath, selectedPackages, batches } = getBatchedPackages();
+  const { packagesPath, selectedPackages } = getSelectedPackages();
   runPackagesToposorted(
     new Logger(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' ')),
     commander,
