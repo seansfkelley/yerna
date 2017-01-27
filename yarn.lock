@@ -8,6 +8,10 @@ async@^2.1.4:
   dependencies:
     lodash "^4.14.0"
 
+async@~1.0.0:
+  version "1.0.0"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/async/-/async-1.0.0.tgz#f8fc04ca3a13784ade9e1641af98578cfbd647a9"
+
 balanced-match@^0.4.1:
   version "0.4.2"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/balanced-match/-/balanced-match-0.4.2.tgz#cb3f3e3c732dc0f01ee70b403f302e61d7709838"
@@ -23,6 +27,10 @@ brace-expansion@^1.0.0:
     balanced-match "^0.4.1"
     concat-map "0.0.1"
 
+colors@1.0.x:
+  version "1.0.3"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/colors/-/colors-1.0.3.tgz#0433f44d809680fdeb60ed260f1b0c262e82a40b"
+
 colors@^1.1.2:
   version "1.1.2"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/colors/-/colors-1.1.2.tgz#168a4701756b6a7f51a12ce0c97bfa28c084ed63"
@@ -36,6 +44,14 @@ commander@^2.9.0:
 concat-map@0.0.1:
   version "0.0.1"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
+
+cycle@1.0.x:
+  version "1.0.3"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/cycle/-/cycle-1.0.3.tgz#21e80b2be8580f98b468f379430662b046c34ad2"
+
+eyes@0.1.x:
+  version "0.1.8"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/eyes/-/eyes-0.1.8.tgz#62cf120234c683785d902348a800ef3e0cc20bc0"
 
 fs.realpath@^1.0.0:
   version "1.0.0"
@@ -67,6 +83,10 @@ inherits@2:
   version "2.0.3"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
 
+isstream@0.1.x:
+  version "0.1.2"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/isstream/-/isstream-0.1.2.tgz#47e63f7af55afa6f92e1500e690eb8b8529c099a"
+
 lodash@^4.14.0, lodash@^4.17.2:
   version "4.17.2"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/lodash/-/lodash-4.17.2.tgz#34a3055babe04ce42467b607d700072c7ff6bf42"
@@ -96,6 +116,21 @@ once@^1.3.0:
 path-is-absolute@^1.0.0:
   version "1.0.1"
   resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
+
+stack-trace@0.0.x:
+  version "0.0.9"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/stack-trace/-/stack-trace-0.0.9.tgz#a8f6eaeca90674c333e7c43953f275b451510695"
+
+winston@^2.3.1:
+  version "2.3.1"
+  resolved "https://artifactory.palantir.build:443/artifactory/api/npm/all-npm/winston/-/winston-2.3.1.tgz#0b48420d978c01804cf0230b648861598225a119"
+  dependencies:
+    async "~1.0.0"
+    colors "1.0.x"
+    cycle "1.0.x"
+    eyes "0.1.x"
+    isstream "0.1.x"
+    stack-trace "0.0.x"
 
 wrappy@1:
   version "1.0.2"
