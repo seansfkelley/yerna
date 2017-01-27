@@ -5,7 +5,7 @@
 require('../lib/error-handling').attachGlobalErrorHandling();
 process.exitCode = 0;
 
-require('colors');
+const chalk = require('chalk');
 const path = require('path');
 const _ = require('lodash');
 const commander = require('commander');
@@ -21,7 +21,7 @@ const { createTaskRunner, runPackagesToposorted, abort } = require('../lib/taskr
 
 function optParallel(n) {
   if (n == null || +n <= 0 || Math.round(n) !== +n) {
-    console.error('yerna: parallel option must be a positive integer'.red);
+    console.error(chalk.red('yerna: parallel option must be a positive integer'));
     // Should probably be exitCode = 1.
     process.exit(1);
   }
@@ -114,7 +114,7 @@ function sideEffectingInit() {
   });
 
   process.on('SIGINT', () => {
-    logger.error('yerna: received sigint, terminating...'.red);
+    logger.error(chalk.red('yerna: received sigint, terminating...'));
     abort();
   });
 }
@@ -157,7 +157,7 @@ function getSelectedPackages(additionalFilter = () => true) {
   const packagesPath = getPackagesPath();
 
   if (!fs.existsSync(packagesPath)) {
-    throw new Error(`path ${packagesPath} does not exist`.red);
+    throw new Error(`path ${packagesPath} does not exist`);
   }
 
   const packagesByName = getPackages(packagesPath);
@@ -177,7 +177,7 @@ function performLink() {
   const startTime = Date.now();
   sideEffectingInit();
   const packageCount = linkAllPackagesToEachOther(getPackagesPath());
-  logger.error(`yerna: linked ${packageCount.toString().cyan} local packages`);
+  logger.info(`yerna: linked ${chalk.cyan(packageCount)} local packages`);
   LoggerWrapper.logSuccessTiming(startTime);
 }
 

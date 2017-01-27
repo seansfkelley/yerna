@@ -2,7 +2,7 @@
 
 // Copyright 2017 Palantir Technologies Inc.
 
-require('colors');
+const chalk = require('chalk');
 
 const fs = require('fs');
 
@@ -11,7 +11,7 @@ const { getPackagesPath, getPackages } = require('../lib/packages');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 
 if (!fs.existsSync('package.json')) {
-  console.error('yarnhack: no package.json in the current directory, aborting...'.red);
+  console.error(chalk.red('yarnhack: no package.json in the current directory, aborting...'));
 } else {
   const packagesByName = getPackages(getPackagesPath());
 
@@ -23,12 +23,12 @@ if (!fs.existsSync('package.json')) {
 
   child.on('exit', (code, signal) => {
     const packageCount = linkAllPackagesToEachOther(getPackagesPath());
-    console.error(`yarnhack: re-linked ${packageCount.toString().cyan} local packages`);
+    console.error(`yarnhack: re-linked ${chalk.cyan(packageCount)} local packages`);
     process.exitCode = code;
   });
 
   process.on('SIGINT', () => {
-    console.error('yarnhack: received sigint, terminating...'.red);
+    console.error(chalk.red('yarnhack: received sigint, terminating...'));
     child.kill();
   });
 }
