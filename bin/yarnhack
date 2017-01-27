@@ -12,24 +12,23 @@ const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-jso
 
 if (!fs.existsSync('package.json')) {
   console.error('yarnhack: no package.json in the current directory, aborting...'.red);
-  process.exit(1);
+} else {
+  const packagesByName = getPackages(getPackagesPath());
+
+  const child = runYarnWithPackageJsonMangling(process.argv.slice(2), {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: 'inherit'
+  }, packagesByName);
+
+  child.on('exit', (code, signal) => {
+    const packageCount = linkAllPackagesToEachOther(getPackagesPath());
+    console.error(`yarnhack: re-linked ${packageCount.toString().cyan} local packages`);
+    process.exitCode = code;
+  });
+
+  process.on('SIGINT', () => {
+    console.error('yarnhack: received sigint, terminating...'.red);
+    child.kill();
+  });
 }
-
-const packagesByName = getPackages(getPackagesPath());
-
-const child = runYarnWithPackageJsonMangling(process.argv.slice(2), {
-  cwd: process.cwd(),
-  env: process.env,
-  stdio: 'inherit'
-}, packagesByName);
-
-child.on('exit', (code, signal) => {
-  const packageCount = linkAllPackagesToEachOther(getPackagesPath());
-  console.log(`yarnhack: re-linked ${packageCount.toString().cyan} local packages`);
-  process.exit(code);
-});
-
-process.on('SIGINT', () => {
-  console.error('yarnhack: received sigint, terminating...'.red);
-  child.kill();
-});
