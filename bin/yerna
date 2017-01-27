@@ -98,7 +98,7 @@ function sideEffectingInit() {
   logger.transports.console.level = commander.loglevel;
 
   if (!commander.color) {
-    require('colors').enabled = false;
+    chalk.enabled = false;
   }
 
   // 10 for default, then one for each of the 'exit' handlers we know will be attached by child processes.
