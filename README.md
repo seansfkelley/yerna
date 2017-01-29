@@ -47,14 +47,11 @@ exec \<command\> | run shell command \<command\> in packages              |
 
 `yarnhack` is an executable that wraps Yarn and mangles `package.json` to prevent Yarn from trying to install packages that don't exist on the registry. Otherwise, it forwards directly to the system-installed `yarn` and understands all commands and flags defined there.
 
-### Replacing Lerna
+### Usage with Lerna
 
-```sh
-npm uninstall -g lerna
-cd path/to/your/repo
-rm lerna.json
-yerna install
-```
+Yerna is backwards-compatible with Lerna, in that it puts the repo into a valid state for Lerna. You can continue to use Lerna for features missing from Yerna (such as publishing), though be sure to [read the caveats](#caveats), in particular, the [behavior around symlinks](#symlinks).
+
+Yerna does not read or write any Yerna- or Lerna-specific files on the filesystem (except for a logfile); in particular, it does not read `lerna.json`.
 
 ### Caveats
 
