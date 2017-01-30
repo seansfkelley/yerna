@@ -3,10 +3,10 @@
 // Copyright 2017 Palantir Technologies Inc.
 
 const chalk = require('chalk');
-
+const _ = require('lodash');
 const fs = require('fs');
 
-const { linkAllPackagesToEachOther } = require('../lib/linking');
+const { linkPackages } = require('../lib/linking');
 const { getPackagesPath, getPackages } = require('../lib/packages');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 
@@ -22,8 +22,8 @@ if (!fs.existsSync('package.json')) {
   }, packagesByName);
 
   child.on('exit', (code, signal) => {
-    const packageCount = linkAllPackagesToEachOther(getPackagesPath());
-    console.error(`yarnhack: re-linked ${chalk.cyan(packageCount)} local packages`);
+    linkPackages(packagesByName);
+    console.error(`yarnhack: re-linked ${chalk.cyan(_.size(packagesByName))} local packages`);
     process.exitCode = code;
   });
 
