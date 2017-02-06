@@ -30,7 +30,10 @@ Yerna provides two binaries: `yerna` itself and a helper `yarnhack`. Both tools 
 
 ### `yerna`
 
-`yerna` is a tool for running tasks over one or more local packages, using Yarn, in parallel. `yerna` provides a few different commands, listed briefly below. Note that all commands respect the package-selection flags (`--include`, etc.) unless otherwise noted.
+`yerna` is a tool for running tasks over one or more local packages, using Yarn, in parallel. `yerna` provides a few different commands, listed briefly below. Note that all commands:
+
+- respect the package-selection flags (`--include`, etc.) unless otherwise noted
+- respect the dependency ordering of packages when running tasks
 
 Run `yerna --help` for more information on the supported commands and flags.
 
