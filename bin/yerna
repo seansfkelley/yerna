@@ -14,22 +14,145 @@ const fs = require('fs');
 const Promise = require('bluebird');
 
 const { getPackagesPath, getPackages } = require('../lib/packages');
-const { linkAllPackagesToEachOther } = require('../lib/linking');
+const { linkPackages, WithLinking } = require('../lib/linking');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
-const { logger, deleteLogFile, LoggerWrapper } = require('../lib/logger');
-const { createTaskRunner, runPackagesToposorted, abort } = require('../lib/taskrunning');
+const { logger, deleteLogFile } = require('../lib/logger');
+const { filterPackages, logFlagFeedback } = require('../lib/filtering');
+const { createTaskRunner, runPackagesToposorted, abort, WithAbort } = require('../lib/taskrunning');
+
+const PACKAGES_PATH = getPackagesPath();
+
+if (!fs.existsSync(PACKAGES_PATH)) {
+  logger.error(chalk.red(`path ${PACKAGES_PATH} does not exist`));
+  process.exitCode = 1;
+}
+
+const PACKAGES = getPackages(PACKAGES_PATH);
+
+let didInit = false;
+function WithInit(fn) {
+  return function() {
+    if (didInit) {
+      throw new Error('cannot initialize twice!');
+    }
+    didInit = true;
+
+    logger.transports.console.level = commander.loglevel;
+
+    if (!commander.color) {
+      chalk.enabled = false;
+    }
+
+    // 10 for default, then one for each of the 'exit' handlers we know will be attached by child processes.
+    // All this does is prevent warnings, but it's good practice.
+    process.setMaxListeners(10 + commander.parallel);
+
+    deleteLogFile();
+
+    const startTime = Date.now();
+
+    function logTiming(verbiage) {
+      logger.info(`yerna: ${verbiage} ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
+    }
+
+    process.on('exit', () => {
+      if (process.exitCode === 0) {
+        deleteLogFile();
+        logTiming('took');
+      } else {
+        logTiming('failed after');
+      }
+    });
+
+    process.on('SIGINT', () => {
+      logger.error(chalk.red('yerna: received sigint, terminating...'));
+      abort(null, { userInitiated: true });
+    });
+
+    if (process.exitCode === 0) {
+      return fn.apply(this, arguments);
+    } else {
+      // Do nothing; wait for process to exit...
+    }
+  }
+}
+
+function decorate(fn, ...decorators) {
+  return decorators.slice().reverse().reduce((decoratedFn, decorator) => decorator(decoratedFn), fn);
+}
+
+const performLink = decorate(function() {
+  linkPackages(PACKAGES);
+  logger.info(`yerna: linked ${chalk.cyan(_.size(PACKAGES))} local packages`);
+}, WithAbort, WithInit);
+
+const performInstall = decorate(function(moreArgs) {
+  const filteredPackages = filterPackages(PACKAGES, commander);
+  const yarnArgs = [ 'install' ].concat(moreArgs);
+  logFlagFeedback(commander, filteredPackages, 'yarn ' + yarnArgs.join(' '));
+  return runPackagesToposorted(
+    filteredPackages,
+    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, PACKAGES)),
+    commander.parallel
+  );
+}, WithAbort, WithInit, WithLinking(PACKAGES));
+
+const performList = decorate(function() {
+  const filteredPackages = filterPackages(PACKAGES, commander);
+  logFlagFeedback(commander, filteredPackages);
+  return runPackagesToposorted(
+    filteredPackages,
+    (pkg) => {
+      logger.info(pkg.name);
+      return Promise.resolve();
+    },
+    commander.parallel
+  );
+}, WithAbort, WithInit);
+
+const performRun = decorate(function(scriptName, moreArgs) {
+  const filteredPackages = filterPackages(PACKAGES, commander, pkg => !!pkg.scripts[scriptName]);
+  const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
+  logFlagFeedback(commander, filteredPackages, 'yarn ' + yarnArgs.join(' '), [ `have a ${chalk.magenta(scriptName)} script` ]);
+  return runPackagesToposorted(
+    filteredPackages,
+    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, PACKAGES)),
+    commander.parallel
+  );
+}, WithAbort, WithInit, WithLinking(PACKAGES));
+
+const performExec = decorate(function(binaryName, moreArgs) {
+  const filteredPackages = filterPackages(PACKAGES, commander);
+  logFlagFeedback(commander, filteredPackages, [ binaryName ].concat(moreArgs).join(' '));
+  return runPackagesToposorted(
+    filteredPackages,
+    createTaskRunner(spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs)),
+    commander.parallel
+  );
+}, WithAbort, WithInit, WithLinking(PACKAGES));
 
 function optParallel(n) {
   if (n == null || +n <= 0 || Math.round(n) !== +n) {
     console.error(chalk.red('yerna: parallel option must be a positive integer'));
-    // Should probably be exitCode = 1.
-    process.exit(1);
+    process.exitCode = 1;
+  } else {
+    return +n;
   }
-  return +n;
 }
 
 function concatOpt(opt, allOpts) {
   return allOpts.concat([ opt ]);
+}
+
+function optEnum(values, optName) {
+  return function(opt) {
+    if (values.indexOf(opt) === -1) {
+      console.error(chalk.red(`yerna: ${optName} option must be one of '${values.join('\', \'')}'`));
+      process.exitCode = 1;
+    } else {
+      return opt;
+    }
+  };
 }
 
 commander
@@ -41,8 +164,27 @@ commander
   .option('--dependents', 'additionally include all transitive dependents of selected packages (even when excluded)', false)
   .option('--dependencies', 'additionally include all transitive dependencies of selected packages (even when excluded)', false)
   .option('-p, --parallel <n>', 'run up to <n> processes in parallel (default: 4)', optParallel, 4)
-  .option('-l, --loglevel <level>', 'set the log level for Yerna', /^(verbose|info|warn|error)$/i, 'info')
+  .option('-l, --loglevel <level>', 'set the log level for Yerna', optEnum([ 'debug', 'verbose', 'info', 'warn', 'error' ], 'loglevel'), 'info')
   .option('-c, --no-color', 'disable colorized output', false);
+
+commander.on('--help', () =>{
+  [
+    '  Notes:',
+    '',
+    '    - Use -- to separate arguments intended for Yarn. See examples.',
+    '    - Most tasks automatically relink local dependencies; `yerna link` usage should be rare.',
+    '',
+    '  Examples:',
+    '',
+    '    $ yerna install',
+    '    $ yerna install --include foo',
+    '    $ yerna install -- --pure-lockfile',
+    '    $ yerna install --include foo --include bar -- --pure-lockfile',
+    '    $ yerna run taskname --include foo --exclude bar',
+    '    $ yerna exec ls -- -la',
+    ''
+  ].forEach(line => console.log(line));
+});
 
 commander
   .command('install -- [args...]')
@@ -68,172 +210,6 @@ commander
   .command('exec <executable> -- [args...]')
   .description('run `<executable> <args>` for the specified packages')
   .action(performExec);
-
-commander.on('--help', () =>{
-  [
-    '  Notes:',
-    '',
-    '    - Use -- to separate arguments intended for Yarn. See examples.',
-    '    - Most tasks automatically relink local dependencies; `yerna link` usage should be rare.',
-    '',
-    '  Examples:',
-    '',
-    '    $ yerna install',
-    '    $ yerna install --include foo',
-    '    $ yerna install -- --pure-lockfile',
-    '    $ yerna install --include foo --include bar -- --pure-lockfile',
-    '    $ yerna run taskname --include foo --exclude bar',
-    '    $ yerna exec ls -- -la',
-    ''
-  ].forEach(line => console.log(line));
-});
-
-let didInit = false;
-function sideEffectingInit() {
-  if (didInit) {
-    return;
-  }
-  didInit = true;
-
-  logger.transports.console.level = commander.loglevel;
-
-  if (!commander.color) {
-    chalk.enabled = false;
-  }
-
-  // 10 for default, then one for each of the 'exit' handlers we know will be attached by child processes.
-  // All this does is prevent warnings, but it's good practice.
-  process.setMaxListeners(10 + commander.parallel);
-
-  deleteLogFile();
-
-  process.on('exit', () => {
-    if (process.exitCode === 0) {
-      deleteLogFile();
-    }
-  });
-
-  process.on('SIGINT', () => {
-    logger.error(chalk.red('yerna: received sigint, terminating...'));
-    abort();
-  });
-}
-
-function findTransitiveDependentsOrDependencies(allPackages, rootPackageName, typeKey) {
-  const selectedPackageNames = [];
-  let packageQueue = [ allPackages[rootPackageName] ];
-  while (packageQueue.length) {
-    const currentPackage = packageQueue.shift();
-    if (selectedPackageNames.indexOf(currentPackage.name) === -1) {
-      selectedPackageNames.push(currentPackage.name);
-      packageQueue = packageQueue.concat(currentPackage[typeKey].map(packageName => allPackages[packageName]))
-    }
-  }
-  return selectedPackageNames.map(packageName => allPackages[packageName]);
-}
-
-function maybeIncludeDependentsAndDependencies(allPackages, package) {
-  let packages = [ package ];
-
-  if (commander.dependents) {
-    packages = packages.concat(_.flatMap(packages, pkg => findTransitiveDependentsOrDependencies(allPackages, pkg.name, 'localDependents')));
-  }
-
-  if (commander.dependencies) {
-    packages = packages.concat(_.flatMap(packages, pkg => findTransitiveDependentsOrDependencies(allPackages, pkg.name, 'localDependencies')));
-  }
-
-  return _.uniqBy(packages, 'name');
-}
-
-function applyIncludeExclude(package) {
-  return (
-    (commander.include.length === 0 || commander.include.some(regex => new RegExp(regex).test(package.name))) &&
-    (commander.exclude.length === 0 || !commander.exclude.some(regex => new RegExp(regex).test(package.name)))
-  );
-};
-
-function getSelectedPackages(additionalFilter = () => true) {
-  const packagesPath = getPackagesPath();
-
-  if (!fs.existsSync(packagesPath)) {
-    throw new Error(`path ${packagesPath} does not exist`);
-  }
-
-  const packagesByName = getPackages(packagesPath);
-  const selectedPackages = _.chain(packagesByName)
-    .values()
-    .filter(applyIncludeExclude)
-    .flatMap(pkg => maybeIncludeDependentsAndDependencies(packagesByName, pkg))
-    .uniqBy('name')
-    .sortBy('name')
-    .filter(additionalFilter)
-    .value();
-
-  return { packagesPath, packagesByName, selectedPackages };
-}
-
-function performLink() {
-  const startTime = Date.now();
-  sideEffectingInit();
-  const packageCount = linkAllPackagesToEachOther(getPackagesPath());
-  logger.info(`yerna: linked ${chalk.cyan(packageCount)} local packages`);
-  LoggerWrapper.logSuccessTiming(startTime);
-}
-
-function performInstall(moreArgs) {
-  sideEffectingInit();
-  const yarnArgs = [ 'install' ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages();
-  runPackagesToposorted(
-    new LoggerWrapper(commander, selectedPackages, 'yarn ' + yarnArgs.join(' ')),
-    commander,
-    packagesPath,
-    selectedPackages,
-    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName))
-  );
-}
-
-function performList() {
-  const startTime = Date.now();
-  sideEffectingInit();
-  const { packagesPath, selectedPackages } = getSelectedPackages();
-  runPackagesToposorted(
-    new LoggerWrapper(commander, selectedPackages),
-    commander,
-    packagesPath,
-    selectedPackages,
-    (pkg) => {
-      logger.info(pkg.name);
-      return Promise.resolve();
-    }
-  );
-}
-
-function performRun(scriptName, moreArgs) {
-  sideEffectingInit();
-  const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
-  const { packagesPath, packagesByName, selectedPackages } = getSelectedPackages(package => !!package.scripts[scriptName]);
-  runPackagesToposorted(
-    new LoggerWrapper(commander, selectedPackages, 'yarn ' + yarnArgs.join(' '), scriptName),
-    commander,
-    packagesPath,
-    selectedPackages,
-    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, packagesByName))
-  );
-}
-
-function performExec(binaryName, moreArgs) {
-  sideEffectingInit();
-  const { packagesPath, selectedPackages } = getSelectedPackages();
-  runPackagesToposorted(
-    new LoggerWrapper(commander, selectedPackages, binaryName + [ '' ].concat(moreArgs).join(' ')),
-    commander,
-    packagesPath,
-    selectedPackages,
-    createTaskRunner(spawnArgs => child_process.spawn(binaryName, moreArgs, spawnArgs))
-  );
-}
 
 commander.parse(process.argv);
 
