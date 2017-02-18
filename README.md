@@ -6,7 +6,7 @@ Yerna is a monorepo management tool in the style of [Lerna](https://lernajs.io/)
 
 ## Disclaimer
 
-The idea for Yerna stemmed from [a Lerna ticket suggesting Yarn integration](https://github.com/lerna/lerna/issues/371). Doing so in Lerna is nontrivial, and long story short, I built [this giant bag of hacks](#how-it-works) to try it out myself. It turns out that the benefits outweighed the costs pretty dramatically for my exact use case, so I cleaned it up for release, and here we are.
+The idea for Yerna stemmed from [a Lerna ticket suggesting Yarn integration](https://github.com/lerna/lerna/issues/371). At the time, doing so in Lerna was nontrivial (see also: https://github.com/lerna/lerna/pull/605), and long story short, I built [this giant bag of hacks](#how-it-works) to try it out myself. It turns out that the benefits outweighed the costs pretty dramatically for my exact use case, so I cleaned it up for release, and here we are.
 
 While I use Yerna heavily myself, it is still fundamentally a hack-based stopgap/overgrown experiment. I am happy to discuss the feature set and its pros/cons in contrast to those of Lerna and Yarn, but note that **I will not be prioritizing feature requests or performing nontrivial maintenance** if it does not affect my own workflow.
 
