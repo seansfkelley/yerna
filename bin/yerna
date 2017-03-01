@@ -13,21 +13,26 @@ const child_process = require('child_process');
 const fs = require('fs');
 const Promise = require('bluebird');
 
-const { getPackagesPath, getPackages } = require('../lib/packages');
+const { readConfig } = require('../lib/config');
+const { getPackages } = require('../lib/packages');
 const { linkPackages, WithLinking } = require('../lib/linking');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 const { logger, deleteLogFile } = require('../lib/logger');
 const { filterPackages, logFlagFeedback } = require('../lib/filtering');
 const { createTaskRunner, runPackagesToposorted, abort, WithAbort } = require('../lib/taskrunning');
 
-const PACKAGES_PATH = getPackagesPath();
+const gitRoot = child_process.execSync('git rev-parse --show-toplevel', {
+  timeout: 5000,
+  stdio: 'pipe'
+}).toString().trim();
 
-if (!fs.existsSync(PACKAGES_PATH)) {
-  logger.error(chalk.red(`path ${PACKAGES_PATH} does not exist`));
+const config = readConfig(gitRoot);
+
+const PACKAGES = getPackages(gitRoot, config);
+if (_.size(PACKAGES) === 0) {
+  logger.error(chalk.red(`could not find any packages under ${config.packages}`));
   process.exitCode = 1;
 }
-
-const PACKAGES = getPackages(PACKAGES_PATH);
 
 let didInit = false;
 function WithInit(fn) {

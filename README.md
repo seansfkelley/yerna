@@ -54,7 +54,20 @@ exec \<command\> | run shell command \<command\> in packages              |
 
 Yerna is backwards-compatible with Lerna, in that it puts the repo into a valid state for Lerna. You can continue to use Lerna for features missing from Yerna (such as publishing), though be sure to [read the caveats](#caveats), in particular, the [behavior around symlinks](#symlinks).
 
-Yerna does not read or write any Yerna- or Lerna-specific files on the filesystem (except for a logfile); in particular, it does not read `lerna.json`.
+Yerna does not read or write any Lerna-specific files on the filesystem (except for a logfile); in particular, it does not read `lerna.json`.
+
+You can customise the paths where Yerna looks for packages by adding a `yerna.json` file:
+
+```json
+{
+  "packages": [
+    "packages/*",
+    "elsewhere/*"
+  ]
+}
+```
+
+This works in the same way as Lerna. The configuration file does not support any other properties.
 
 ### Caveats
 
