@@ -29,7 +29,7 @@ const gitRoot = child_process.execSync('git rev-parse --show-toplevel', {
 const config = readConfig(gitRoot);
 
 const PACKAGES = getPackages(gitRoot, config);
-if (PACKAGES.length === 0) {
+if (_.size(PACKAGES) === 0) {
   logger.error(chalk.red(`could not find any packages under ${config.packages}`));
   process.exitCode = 1;
 }
