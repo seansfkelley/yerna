@@ -6,24 +6,27 @@ const chalk = require('chalk');
 const _ = require('lodash');
 const fs = require('fs');
 
+const { GIT_ROOT } = require('../lib/git');
+const { readConfig } = require('../lib/config');
 const { linkPackages } = require('../lib/linking');
-const { getPackagesPath, getPackages } = require('../lib/packages');
+const { getPackages } = require('../lib/packages');
 const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
 
 if (!fs.existsSync('package.json')) {
   console.error(chalk.red('yarnhack: no package.json in the current directory, aborting...'));
 } else {
-  const packagesByName = getPackages(getPackagesPath());
+  const CONFIG = readConfig(GIT_ROOT);
+  const PACKAGES = getPackages(GIT_ROOT, CONFIG);
 
   const child = runYarnWithPackageJsonMangling(process.argv.slice(2), {
     cwd: process.cwd(),
     env: process.env,
     stdio: 'inherit'
-  }, packagesByName);
+  }, PACKAGES);
 
   child.on('exit', (code, signal) => {
-    linkPackages(packagesByName);
-    console.error(`yarnhack: re-linked ${chalk.cyan(_.size(packagesByName))} local packages`);
+    linkPackages(PACKAGES);
+    console.error(`yarnhack: re-linked ${chalk.cyan(_.size(PACKAGES))} local packages`);
     process.exitCode = code;
   });
 
