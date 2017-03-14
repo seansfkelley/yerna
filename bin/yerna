@@ -13,7 +13,7 @@ const child_process = require('child_process');
 const fs = require('fs');
 const Promise = require('bluebird');
 
-const { GIT_ROOT } = require('../lib/git');
+const { PROJECT_ROOT } = require('../lib/project');
 const { readConfig } = require('../lib/config');
 const { getPackages } = require('../lib/packages');
 const { linkPackages, WithLinking } = require('../lib/linking');
@@ -22,8 +22,8 @@ const { logger, deleteLogFile } = require('../lib/logger');
 const { filterPackages, logFlagFeedback } = require('../lib/filtering');
 const { createTaskRunner, runPackagesToposorted, abort, WithAbort } = require('../lib/taskrunning');
 
-const CONFIG = readConfig(GIT_ROOT);
-const PACKAGES = getPackages(GIT_ROOT, CONFIG);
+const CONFIG = readConfig(PROJECT_ROOT);
+const PACKAGES = getPackages(PROJECT_ROOT, CONFIG);
 
 if (_.size(PACKAGES) === 0) {
   logger.error(chalk.red(`could not find any packages under ${CONFIG.packages}`));
