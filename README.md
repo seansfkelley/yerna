@@ -24,9 +24,9 @@ Also ensure that Yarn's globally-installed binaries are accessible on your `PATH
 
 ## Usage
 
-**Note:** Please also read the [Caveats](#caveats)!
+**Note:** Please also read the [Caveats/Known Issues](#caveatsknown-issues)!
 
-Yerna provides two binaries: `yerna` itself and a helper `yarnhack`. Both tools assume that they're running out of a git repo where packages are direct descendants of `<git root>/packages`.
+Yerna provides two binaries: `yerna` itself and a helper `yarnhack`.
 
 ### `yerna`
 
@@ -52,7 +52,7 @@ exec \<command\> | run shell command \<command\> in packages              |
 
 ### Usage with Lerna
 
-Yerna is backwards-compatible with Lerna, in that it puts the repo into a valid state for Lerna. You can continue to use Lerna for features missing from Yerna (such as publishing), though be sure to [read the caveats](#caveats), in particular, the [behavior around symlinks](#symlinks).
+Yerna is backwards-compatible with Lerna, in that it puts the repo into a valid state for Lerna. You can continue to use Lerna for features missing from Yerna (such as publishing), though be sure to [read the caveats/known issues](#caveatsknown-issues), in particular, the [behavior around symlinks](#symlinks).
 
 Yerna does not read or write any Lerna-specific files on the filesystem (except for a logfile); in particular, it does not read `lerna.json`.
 
@@ -69,7 +69,11 @@ You can customise the paths where Yerna looks for packages by adding a `yerna.js
 
 This works in the same way as Lerna. The configuration file does not support any other properties.
 
-### Caveats
+### Caveats/Known Issues
+
+#### Parallel `install` failures
+
+`yerna install` can sometimes die with an error mentioning a failure to write/unlink files in the Yarn cache directory. This can happen when multiple Yarn processes are installing and at least one is writing to the cache, i.e., you have a lot of new packages to install. A temporary workaround is to serialize the installation with `--parallel 1`. Further installs should be read-heavy, since the cache is populated, and not run into the same issue (at least, until your cache gets old again and hits the same issue).
 
 #### `package.json` mangling
 
