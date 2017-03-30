@@ -73,7 +73,17 @@ This works in the same way as Lerna. The configuration file does not support any
 
 #### Parallel `install` failures
 
-`yerna install` can sometimes die with an error mentioning a failure to write/unlink files in the Yarn cache directory. This can happen when multiple Yarn processes are installing and at least one is writing to the cache, i.e., you have a lot of new packages to install. A temporary workaround is to serialize the installation with `--parallel 1`. Further installs should be read-heavy, since the cache is populated, and not run into the same issue (at least, until your cache gets old again and hits the same issue).
+`yerna install` can sometimes die with an error mentioning a failure to find/write/unlink files in the Yarn cache directory. An example:
+
+```
+yarn install v0.21.3
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+error Couldn't find a package.json file in "/home/ubuntu/.cache/yarn/<some library name>"
+info Visit https://yarnpkg.com/en/docs/cli/install for documentation about this command.
+```
+
+This can happen when multiple Yarn processes are installing and at least one is writing to the cache, i.e., you have a lot of new packages to install. A temporary workaround is to serialize the installation with `--parallel 1`. Further installs should be read-heavy, since the cache is populated, and not run into the same issue (at least, until your cache gets old again and hits the same issue).
 
 #### `package.json` mangling
 
