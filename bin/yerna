@@ -166,7 +166,7 @@ commander
   .option('--dependencies', 'additionally include all transitive dependencies of selected packages (even when excluded)', false)
   .option('-p, --parallel <n>', 'run up to <n> processes in parallel (default: 4)', optParallel, 4)
   .option('-l, --loglevel <level>', 'set the log level for Yerna', optEnum([ 'debug', 'verbose', 'info', 'warn', 'error' ], 'loglevel'), 'info')
-  .option('-f, --force', 'don\'t abort if a task exits non-zero or is interrupts', false)
+  .option('-f, --force', 'don\'t abort if a task exits non-zero or is interrupted', false)
   .option('-c, --no-color', 'disable colorized output', false);
 
 commander.on('--help', () =>{
