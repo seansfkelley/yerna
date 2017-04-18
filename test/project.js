@@ -8,13 +8,15 @@ const mockBin = require('mock-bin')
 const originalCwd = process.cwd()
 
 test('git root', (t) => {
+  t.plan(1);
+
   const {PROJECT_ROOT} = proxyquire('../lib/project', {});
   t.equal(PROJECT_ROOT, path.join(__dirname, '..'));
-
-  t.end();
 });
 
 test('yerna.json root', (t) => {
+  t.plan(1);
+
   mockBin('git', 'node', 'process.exit(1)').then((unmock) => {
     const projectDir = path.join(__dirname, 'fixture-project');
     const childDir = path.join(projectDir, 'child');
@@ -26,24 +28,21 @@ test('yerna.json root', (t) => {
 
     process.chdir(originalCwd);
     unmock();
-    t.end();
   });
 });
 
 test('error if no git root or yerna.json', (t) => {
+  t.plan(1);
+
   mockBin('git', 'node', 'process.exit(1)').then((unmock) => {
     const dir = tmp.dirSync({unsafeCleanup: true}).name;
     process.chdir(dir);
 
-    try {
+    t.throws(() => {
       proxyquire('../lib/project', {});
-    } catch (error) {
-      t.pass(error);
-      t.ok(error.toString().indexOf("yerna: Can't find project root") !== -1);
-    }
+    }, new RegExp('Can\'t find project root'));
 
     process.chdir(originalCwd);
     unmock();
-    t.end();
   });
 });
