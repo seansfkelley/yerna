@@ -102,11 +102,17 @@ npm install-related lifecycle scripts (namely `preinstall`, `postinstall` and `p
 
 ## Motivation
 
-The "Lerna monorepo model" is simple and works reasonably well, but at scale, npm itself falters and causes delays (slow, filesystem-heavy operations) and breaks (nondeterministic installation). Swapping out the npm behaviors for Yarn improves both automated build stability/speed and devex considerably.
+Originally, Yerna was written because Lerna had no Yarn support. Now that it does, the gap is smaller, but the primary improvements that Yerna offers are the following:
 
-Additionally, there were a handful of features I found useful that have not been merged into Lerna or are not appropriate for Lerna, as well as Lerna features I do not need. All together, these changes were easier to implement as a new tool rather than a fork of Lerna.
+- inclusion of `yarnhack`, which is necessary for adding/removing packages if you don't want Yarn to overwrite your symlinks every time
+- `--dependencies` and `--dependents` flags for all task types
+- dedicated `link` task
+- automatic re-symlinking on task start/completion
+- improved throughput for always-on topological sorting
 
-Hopefully this repo serves as a reasonable stop-gap until [Lerna gets merged into Yarn](https://github.com/yarnpkg/yarn/issues/946#issuecomment-264597575), at which point it should be mostly or entirely obsoleted by vanilla Yarn.
+I've [filed a few issues on Lerna](https://github.com/lerna/lerna/issues/created_by/seansfkelley) to track adding some of these features.
+
+The goal is for Yerna to serve as a reasonable stop-gap until [Lerna gets merged into Yarn](https://github.com/yarnpkg/yarn/issues/946#issuecomment-264597575), at which point it should be mostly or entirely obsoleted by vanilla Yarn.
 
 ## How it Works
 
