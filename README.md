@@ -107,8 +107,10 @@ Originally, Yerna was written because Lerna had no Yarn support. Now that it doe
 - inclusion of `yarnhack`, which is necessary for adding/removing packages if you don't want Yarn to overwrite your symlinks every time
 - `--dependencies` and `--dependents` flags for all task types
 - dedicated `link` task
+- support for multiply-specified `--include` (Lerna: `--scope`) and `--exclude` (Lerna: `--ignore`)
+- sectioned/labeled stdout so you can tell which packages are generating what output
 - automatic re-symlinking on task start/completion
-- improved throughput for always-on topological sorting
+- improved throughput for (always-on) topological sorting and cycle detection
 
 I've [filed a few issues on Lerna](https://github.com/lerna/lerna/issues/created_by/seansfkelley) to track adding some of these features.
 
