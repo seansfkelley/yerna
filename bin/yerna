@@ -116,12 +116,12 @@ const performRun = decorate(function(scriptName, moreArgs, options) {
   const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
   const executableName = options.mangle ? 'yarnhack' : 'yarn';
   logFlagFeedback(commander, filteredPackages, executableName + ' ' + yarnArgs.join(' '), [ `have a ${chalk.magenta(scriptName)} script` ]);
-  const task = options.mangle
+  const spawnTask = options.mangle
     ? spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, PACKAGES)
     : spawnArgs => runYarn(yarnArgs, spawnArgs);
   return runPackagesToposorted(
     filteredPackages,
-    createTaskRunner(task, commander.force),
+    createTaskRunner(spawnTask, commander.force),
     commander.parallel
   );
 }, WithAbort, WithInit, WithLinking(PACKAGES));
@@ -187,7 +187,7 @@ commander.on('--help', () =>{
     '    $ yerna install -- --pure-lockfile',
     '    $ yerna install --include foo --include bar -- --pure-lockfile',
     '    $ yerna run taskname --include foo --exclude bar',
-    '    $ yerna run taskname -i ^foo(bar)? --mangle',
+    '    $ yerna run taskname -i "^foo(bar)?" --mangle',
     '    $ yerna exec ls -- -la',
     ''
   ].forEach(line => console.log(line));
