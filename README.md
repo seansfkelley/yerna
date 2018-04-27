@@ -1,5 +1,8 @@
 # Yerna
 
+[![CircleCI](https://img.shields.io/circleci/project/github/nomcopter/yerna/master.svg)](https://circleci.com/gh/nomcopter/yerna)
+[![npm](https://img.shields.io/npm/v/yernapkg.svg)](https://www.npmjs.com/package/yernapkg)
+
 > Yarn + Lerna = Yerna
 
 Yerna is a monorepo management tool in the style of [Lerna](https://lernajs.io/),
