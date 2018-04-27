@@ -1,6 +1,6 @@
 {
   "name": "yernapkg",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Yarn + Lerna = Yerna",
   "license": "Apache-2.0",
   "scripts": {
