@@ -15,7 +15,7 @@ const { PROJECT_ROOT } = require('../lib/project');
 const { readConfig } = require('../lib/config');
 const { getPackages } = require('../lib/packages');
 const { linkPackages, WithLinking } = require('../lib/linking');
-const { runYarnWithPackageJsonMangling } = require('../lib/yarn-with-package-json-mangling');
+const { runYarnWithPackageJsonMangling, runYarn } = require('../lib/yarn-with-package-json-mangling');
 const { logger, deleteLogFile } = require('../lib/logger');
 const { filterPackages, logFlagFeedback } = require('../lib/filtering');
 const { createTaskRunner, runPackagesToposorted, abort, WithAbort } = require('../lib/taskrunning');
@@ -109,13 +109,17 @@ const performList = decorate(function() {
   );
 }, WithAbort, WithInit);
 
-const performRun = decorate(function(scriptName, moreArgs) {
+const performRun = decorate(function(scriptName, moreArgs, options) {
   const filteredPackages = filterPackages(PACKAGES, commander, pkg => !!pkg.scripts[scriptName]);
   const yarnArgs = [ 'run', scriptName  ].concat(moreArgs);
-  logFlagFeedback(commander, filteredPackages, 'yarn ' + yarnArgs.join(' '), [ `have a ${chalk.magenta(scriptName)} script` ]);
+  const executableName = options.mangle ? 'yarnhack' : 'yarn';
+  logFlagFeedback(commander, filteredPackages, executableName + ' ' + yarnArgs.join(' '), [ `have a ${chalk.magenta(scriptName)} script` ]);
+  const spawnTask = options.mangle
+    ? spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, PACKAGES)
+    : spawnArgs => runYarn(yarnArgs, spawnArgs);
   return runPackagesToposorted(
     filteredPackages,
-    createTaskRunner(spawnArgs => runYarnWithPackageJsonMangling(yarnArgs, spawnArgs, PACKAGES), commander.force),
+    createTaskRunner(spawnTask, commander.force),
     commander.parallel
   );
 }, WithAbort, WithInit, WithLinking(PACKAGES));
@@ -181,6 +185,7 @@ commander.on('--help', () =>{
     '    $ yerna install -- --pure-lockfile',
     '    $ yerna install --include foo --include bar -- --pure-lockfile',
     '    $ yerna run taskname --include foo --exclude bar',
+    '    $ yerna run taskname -i "^foo(bar)?" --mangle',
     '    $ yerna exec ls -- -la',
     ''
   ].forEach(line => console.log(line));
@@ -203,6 +208,7 @@ commander
 
 commander
   .command('run <scriptname> -- [args...]')
+  .option('--mangle', 'mangle package.json before running the script in each package (default: false)', false)
   .description('`yarn run <scriptname>` for the specified packages')
   .action(performRun);
 
