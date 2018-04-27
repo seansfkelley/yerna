@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-// Copyright 2017 Palantir Technologies Inc.
-
 require('../lib/error-handling').attachGlobalErrorHandling();
 process.exitCode = 0;
 
