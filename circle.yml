@@ -1,11 +1,21 @@
 machine:
   node:
-    version: 6.9.1
-
+    version: 8.10.0
+dependencies:
+  pre:
+    - npm install -g yarn
+  cache_directories:
+    - "~/.cache/yarn"
+    - "node_modules"
+  override:
+    - yarn install --frozen-lockfile
+test:
+  override:
+    - yarn test
 deployment:
   npm-publish:
     tag: /v[0-9]+(\.[0-9]+){2}(-.*[0-9]+)?/
-    owner: palantir
+    owner: nomcopter
     commands:
       - touch .npmrc
       - printf "\n$NPM_REGISTRY_CREDS\n" >> .npmrc
