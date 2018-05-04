@@ -133,3 +133,7 @@ Hacks. Filthy, awful hacks.
 Yarn demands complete control over `node_modules`. This is reasonable; the only reason that Lerna worked "seamlessly" is because npm was lenient about the structure and content of `node_modules` (as long as it appeared to satify the constraints in `package.json`). Lerna was free to make all kinds of symlinks and npm would happily chug along ignoring them. Yarn, in its strictness, will clear out these symlinks _and_ will attempt to download packages that we know to be local-only.
 
 The workaround is to wrap Yarn in a task that mangles the `package.json`s to remove all local references before running Yarn. In practice, this works great, but the failure mode can be very confusing for those who aren't intimately familiar with how `node_modules`, npm and Yarn work. It also means that Yarn is free to delete all your symlinks and pretty much any time (as a convenience, `yerna` and `yarnhack` will re-link packages any time Yarn was run).
+
+## Contributors
+
+Original Author: [@seansfkelley](https://github.com/seansfkelley)
